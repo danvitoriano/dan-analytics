@@ -410,14 +410,20 @@ function downloadCSV() {
   a.click();
 }
 
+function mdCell(v) {
+  return String(v ?? '—').replace(/\\r?\\n/g, ' ').replace(/\|/g, '｜').trim();
+}
+
 function downloadMD() {
   const posts = currentPosts();
-  const header = '| Data | Legenda | Link | ❤️ | 💬 | Alcance | Salvos |';
-  const sep    = '|------|---------|------|-----|-----|---------|--------|';
+  const header = '| Data | Legenda | Link | Curtidas | Comentarios | Alcance | Salvos | Destaque |';
+  const sep    = '| ---- | ------- | ---- | -------: | ----------: | ------: | -----: | -------- |';
   const rows = posts.map(p => {
-    const hot = (p.reach ?? 0) >= 50000 ? ' 🔥' : '';
-    const caption = ((p.caption || '').replace(/\\n/g,' ').replace(/\|/g,'\\|')).slice(0, 80);
-    return \`| \${new Date(p.timestamp).toLocaleDateString('pt-BR')} | \${caption}\${hot} | \${p.permalink || ''} | \${p.like_count ?? '—'} | \${p.comments_count ?? '—'} | \${p.reach ?? '—'} | \${p.saved ?? '—'} |\`;
+    const date    = new Date(p.timestamp).toLocaleDateString('pt-BR');
+    const caption = mdCell(p.caption).slice(0, 100);
+    const link    = p.permalink || '';
+    const hot     = (p.reach ?? 0) >= 50000 ? 'Sim 🔥' : 'Nao';
+    return \`| \${date} | \${caption} | \${link} | \${p.like_count ?? '—'} | \${p.comments_count ?? '—'} | \${p.reach ?? '—'} | \${p.saved ?? '—'} | \${hot} |\`;
   });
   const blob = new Blob([header + '\\n' + sep + '\\n' + rows.join('\\n')], { type: 'text/markdown;charset=utf-8;' });
   const a = document.createElement('a');
