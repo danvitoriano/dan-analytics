@@ -243,10 +243,7 @@ function setFilter(f) {
 function applyFilter() {
   let posts = window._allPosts ?? [];
   if (activeFilter === 'top') {
-    posts = [...posts].sort((a, b) =>
-      ((b.like_count ?? 0) + (b.comments_count ?? 0) + (b.saved ?? 0)) -
-      ((a.like_count ?? 0) + (a.comments_count ?? 0) + (a.saved ?? 0))
-    ).slice(0, 10);
+    posts = posts.filter(p => (p.reach ?? 0) >= 50000);
   } else if (activeFilter === 'alura') {
     posts = posts.filter(p => (p.caption || '').toLowerCase().includes('alura'));
   }
