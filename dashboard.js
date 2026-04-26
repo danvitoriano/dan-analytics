@@ -220,6 +220,23 @@ const HTML = `<!DOCTYPE html>
   .btn-download { margin-left: auto; display: flex; gap: 6px; }
   .btn-dl { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
   .btn-dl:hover { border-color: #555; color: #fff; }
+  .adv-filter { background: #141414; border: 1px solid #2a2a2a; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  .adv-filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .adv-filter-row:last-of-type { margin-bottom: 0; }
+  .adv-label { font-size: 12px; color: #666; width: 36px; }
+  .adv-select, .adv-op { background: #1e1e1e; border: 1px solid #333; color: #e0e0e0; padding: 5px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .adv-input { background: #1e1e1e; border: 1px solid #333; color: #e0e0e0; padding: 5px 8px; border-radius: 6px; font-size: 12px; width: 90px; }
+  .adv-remove { background: none; border: none; color: #555; font-size: 16px; cursor: pointer; line-height: 1; padding: 0 4px; }
+  .adv-remove:hover { color: #e07070; }
+  .adv-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .adv-add { background: none; border: 1px dashed #333; color: #666; padding: 4px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .adv-add:hover { border-color: #555; color: #aaa; }
+  .adv-apply { background: linear-gradient(135deg, #833ab4, #fd1d1d); border: none; color: #fff; padding: 5px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .adv-clear { background: none; border: 1px solid #333; color: #666; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .adv-clear:hover { color: #aaa; border-color: #555; }
+  .toggle-adv { background: none; border: 1px solid #333; color: #666; padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; }
+  .toggle-adv:hover { color: #aaa; border-color: #555; }
+  .toggle-adv.on { border-color: #833ab4; color: #c084fc; }
   tr.highlight td { background: #1a1f10 !important; }
   tr.highlight:hover td { background: #222d14 !important; }
   .col-link { font-size: 11px; color: #666; word-break: break-all; }
@@ -355,8 +372,17 @@ function renderPosts(posts) {
       <button class="filter-btn\${activeFilter==='all'?' active':''}" data-f="all" onclick="setFilter('all')">Todos</button>
       <button class="filter-btn\${activeFilter==='top'?' active':''}" data-f="top" onclick="setFilter('top')">🏆 Alcance > 50k</button>
       <button class="filter-btn\${activeFilter==='alura'?' active':''}" data-f="alura" onclick="setFilter('alura')">🎓 Posts da Alura</button>
+      <button class="toggle-adv\${activeFilter==='adv'?' on':''}" onclick="toggleAdv()">⚙ Filtro avançado</button>
       <div class="btn-download">
         <button class="btn-dl" onclick="downloadCSV()">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="adv-filter" id="adv-panel" style="display:none">
+      <div id="adv-rows"></div>
+      <div class="adv-actions">
+        <button class="adv-add" onclick="addAdvRow()">+ Adicionar condição</button>
+        <button class="adv-apply" onclick="applyAdv()">Aplicar</button>
+        <button class="adv-clear" onclick="clearAdv()">Limpar</button>
       </div>
     </div>
     <p class="post-count">\${posts.length} post\${posts.length !== 1 ? 's' : ''}\${activeFilter !== 'all' ? ' filtrados' : ' no período'}</p>
@@ -443,6 +469,80 @@ async function load() {
   } catch (e) {
     document.getElementById('root').innerHTML = \`<div class="error">Erro: \${e.message}</div>\`;
   }
+}
+
+const METRICS = { reach: 'Alcance', like_count: 'Curtidas', comments_count: 'Comentários', saved: 'Salvos' };
+const OPS = { '>=': '≥', '<=': '≤', '=': '=', '>': '>', '<': '<' };
+let advRowCount = 0;
+
+function metricOpts() {
+  return Object.entries(METRICS).map(([k,v]) => \`<option value="\${k}">\${v}</option>\`).join('');
+}
+function opOpts() {
+  return Object.entries(OPS).map(([k,v]) => \`<option value="\${k}">\${v}</option>\`).join('');
+}
+
+function toggleAdv() {
+  const panel = document.getElementById('adv-panel');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  document.querySelector('.toggle-adv').classList.toggle('on', open);
+  if (open && !document.getElementById('adv-rows').children.length) addAdvRow();
+}
+
+function addAdvRow() {
+  const id = ++advRowCount;
+  const container = document.getElementById('adv-rows');
+  const isFirst = container.children.length === 0;
+  const row = document.createElement('div');
+  row.className = 'adv-filter-row';
+  row.id = 'adv-row-' + id;
+  row.innerHTML = \`
+    <span class="adv-label">\${isFirst ? 'Onde' : 'E'}</span>
+    <select class="adv-select" data-field>\${metricOpts()}</select>
+    <select class="adv-op" data-op>\${opOpts()}</select>
+    <input class="adv-input" type="number" data-val placeholder="0">
+    <button class="adv-remove" onclick="removeAdvRow(\${id})">×</button>
+  \`;
+  container.appendChild(row);
+}
+
+function removeAdvRow(id) {
+  document.getElementById('adv-row-' + id)?.remove();
+  const rows = document.querySelectorAll('#adv-rows .adv-filter-row');
+  rows.forEach((r, i) => { r.querySelector('.adv-label').textContent = i === 0 ? 'Onde' : 'E'; });
+}
+
+function applyAdv() {
+  const rows = [...document.querySelectorAll('#adv-rows .adv-filter-row')];
+  const conditions = rows.map(r => ({
+    field: r.querySelector('[data-field]').value,
+    op:    r.querySelector('[data-op]').value,
+    val:   parseFloat(r.querySelector('[data-val]').value) || 0,
+  }));
+  if (!conditions.length) return;
+
+  activeFilter = 'adv';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+
+  let posts = window._allPosts ?? [];
+  posts = posts.filter(p => conditions.every(({ field, op, val }) => {
+    const v = p[field] ?? 0;
+    if (op === '>=') return v >= val;
+    if (op === '<=') return v <= val;
+    if (op === '>')  return v > val;
+    if (op === '<')  return v < val;
+    if (op === '=')  return v === val;
+    return true;
+  }));
+  renderPosts(posts);
+}
+
+function clearAdv() {
+  document.getElementById('adv-rows').innerHTML = '';
+  advRowCount = 0;
+  addAdvRow();
+  setFilter('all');
 }
 
 function currentPosts() {
