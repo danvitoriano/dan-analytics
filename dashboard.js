@@ -454,9 +454,10 @@ function esc(v) {
 
 function downloadCSV() {
   const posts = currentPosts();
-  const header = 'Data,Legenda,Link,Curtidas,Comentários,Alcance,Salvos,Destaque';
+  const header = 'Data,Título,Legenda,Link,Curtidas,Comentários,Alcance,Salvos,Destaque';
   const rows = posts.map(p => [
     new Date(p.timestamp).toLocaleDateString('pt-BR'),
+    esc(p.ai_title || generateTitle(p)),
     esc((p.caption || '').replace(/\\n/g,' ')),
     esc(p.permalink),
     p.like_count ?? '',
