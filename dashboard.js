@@ -228,6 +228,21 @@ function initDates() {
   document.querySelector('.preset[onclick="setPreset(30)"]').classList.add('active');
 }
 
+function generateTitle(p) {
+  const type = { VIDEO: 'Vídeo', IMAGE: 'Foto', CAROUSEL_ALBUM: 'Carrossel' }[p.media_type] || p.media_type;
+  if (!p.caption) return type + ' sem legenda';
+  const clean = p.caption
+    .replace(/#\\S+/g, '')        // remove hashtags
+    .replace(/https?:\\/\\/\\S+/g, '') // remove URLs
+    .replace(/[\\u{1F300}-\\u{1FFFF}]/gu, '') // remove emojis
+    .replace(/\\s+/g, ' ')
+    .trim();
+  if (!clean) return type;
+  const sentence = clean.split(/[.!?\\n]/)[0].trim();
+  const words = sentence.split(' ').slice(0, 7).join(' ');
+  return words.length > 2 ? words : type;
+}
+
 function fmt(n) {
   if (n == null) return '—';
   return Number(n).toLocaleString('pt-BR');
@@ -273,8 +288,10 @@ function renderPosts(posts) {
       : '<span class="thumb-ph"></span>';
     const caption = (p.caption || '').replace(/\\n/g, ' ');
     const isHot = (p.reach ?? 0) >= 50000;
+    const title = generateTitle(p);
     return \`<tr class="\${isHot ? 'highlight' : ''}">
       <td style="width:50px">\${thumb}</td>
+      <td style="width:140px;font-size:12px;color:#bbb;font-weight:500">\${title}</td>
       <td class="caption">\${caption ? \`<a href="\${p.permalink}" target="_blank">\${caption}</a>\` : '<span style="color:#555">—</span>'}</td>
       <td class="col-link" style="width:180px">\${p.permalink ? \`<a href="\${p.permalink}" target="_blank">\${p.permalink}</a>\` : '—'}</td>
       <td class="num col-date" style="width:95px">\${date}</td>
@@ -292,13 +309,13 @@ function renderPosts(posts) {
       <button class="filter-btn\${activeFilter==='alura'?' active':''}" data-f="alura" onclick="setFilter('alura')">🎓 Posts da Alura</button>
       <div class="btn-download">
         <button class="btn-dl" onclick="downloadCSV()">⬇ CSV</button>
-        <button class="btn-dl" onclick="downloadMD()">⬇ Markdown</button>
       </div>
     </div>
     <p class="post-count">\${posts.length} post\${posts.length !== 1 ? 's' : ''}\${activeFilter !== 'all' ? ' filtrados' : ' no período'}</p>
     <table>
       <thead><tr>
         <th style="width:50px"></th>
+        <th style="width:140px">Título</th>
         <th onclick="sortBy('caption')">Legenda <span class="sort-arrow">\${arrow('caption')}</span></th>
         <th style="width:180px">Link</th>
         <th class="num col-date" style="width:95px" onclick="sortBy('timestamp')">Data <span class="sort-arrow">\${arrow('timestamp')}</span></th>
