@@ -162,6 +162,16 @@ const HTML = `<!DOCTYPE html>
   .section { margin-bottom: 32px; }
   .sort-arrow { font-size: 10px; margin-left: 2px; }
   .post-count { font-size: 12px; color: #555; margin-bottom: 10px; }
+  @media (max-width: 700px) {
+    .col-reach, .col-saved { display: none; }
+  }
+  @media (max-width: 500px) {
+    .col-date, .col-comments { display: none; }
+  }
+  .filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-btn { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 5px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; }
+  .filter-btn:hover { border-color: #555; color: #fff; }
+  .filter-btn.active { border-color: #833ab4; color: #fff; background: #2a1a3a; }
 </style>
 </head>
 <body>
@@ -173,6 +183,7 @@ const HTML = `<!DOCTYPE html>
     <button class="preset" onclick="setPreset(90)">90d</button>
     <button class="preset" onclick="setPreset(180)">6m</button>
     <button class="preset" onclick="setPreset(365)">1a</button>
+    <button class="preset" onclick="setPreset(729)">2a</button>
     <button class="preset" onclick="setPreset(0)">Tudo</button>
   </div>
   <span class="sep">|</span>
@@ -188,6 +199,7 @@ const HTML = `<!DOCTYPE html>
 
 <script>
 let sortKey = 'timestamp', sortDir = -1;
+let activeFilter = 'all';
 
 function toDateStr(d) {
   return d.toISOString().slice(0, 10);
@@ -218,11 +230,30 @@ function fmt(n) {
 function sortBy(key) {
   if (sortKey === key) sortDir *= -1;
   else { sortKey = key; sortDir = -1; }
-  renderPosts(window._posts);
+  applyFilter();
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(\`.filter-btn[data-f="\${f}"]\`)?.classList.add('active');
+  applyFilter();
+}
+
+function applyFilter() {
+  let posts = window._allPosts ?? [];
+  if (activeFilter === 'top') {
+    posts = [...posts].sort((a, b) =>
+      ((b.like_count ?? 0) + (b.comments_count ?? 0) + (b.saved ?? 0)) -
+      ((a.like_count ?? 0) + (a.comments_count ?? 0) + (a.saved ?? 0))
+    ).slice(0, 10);
+  } else if (activeFilter === 'alura') {
+    posts = posts.filter(p => (p.caption || '').toLowerCase().includes('alura'));
+  }
+  renderPosts(posts);
 }
 
 function renderPosts(posts) {
-  window._posts = posts;
   const sorted = [...posts].sort((a, b) => {
     const av = a[sortKey], bv = b[sortKey];
     if (typeof av === 'string') return sortDir * av.localeCompare(bv ?? '');
@@ -240,25 +271,30 @@ function renderPosts(posts) {
     return \`<tr>
       <td style="width:50px">\${thumb}</td>
       <td class="caption">\${caption ? \`<a href="\${p.permalink}" target="_blank">\${caption}</a>\` : '<span style="color:#555">—</span>'}</td>
-      <td class="num" style="width:95px">\${date}</td>
+      <td class="num col-date" style="width:95px">\${date}</td>
       <td class="num" style="width:70px">\${fmt(p.like_count)}</td>
-      <td class="num" style="width:70px">\${fmt(p.comments_count)}</td>
-      <td class="num" style="width:80px">\${fmt(p.reach)}</td>
-      <td class="num" style="width:68px">\${fmt(p.saved)}</td>
+      <td class="num col-comments" style="width:70px">\${fmt(p.comments_count)}</td>
+      <td class="num col-reach" style="width:80px">\${fmt(p.reach)}</td>
+      <td class="num col-saved" style="width:68px">\${fmt(p.saved)}</td>
     </tr>\`;
   }).join('');
 
   document.getElementById('posts-table').innerHTML = \`
-    <p class="post-count">\${posts.length} post\${posts.length !== 1 ? 's' : ''} no período</p>
+    <div class="filters">
+      <button class="filter-btn\${activeFilter==='all'?' active':''}" data-f="all" onclick="setFilter('all')">Todos</button>
+      <button class="filter-btn\${activeFilter==='top'?' active':''}" data-f="top" onclick="setFilter('top')">🏆 Top 10 Engajamento</button>
+      <button class="filter-btn\${activeFilter==='alura'?' active':''}" data-f="alura" onclick="setFilter('alura')">🎓 Posts da Alura</button>
+    </div>
+    <p class="post-count">\${posts.length} post\${posts.length !== 1 ? 's' : ''}\${activeFilter !== 'all' ? ' filtrados' : ' no período'}</p>
     <table>
       <thead><tr>
         <th style="width:50px"></th>
         <th onclick="sortBy('caption')">Legenda <span class="sort-arrow">\${arrow('caption')}</span></th>
-        <th class="num" style="width:95px" onclick="sortBy('timestamp')">Data <span class="sort-arrow">\${arrow('timestamp')}</span></th>
+        <th class="num col-date" style="width:95px" onclick="sortBy('timestamp')">Data <span class="sort-arrow">\${arrow('timestamp')}</span></th>
         <th class="num" style="width:70px" onclick="sortBy('like_count')">❤️ <span class="sort-arrow">\${arrow('like_count')}</span></th>
-        <th class="num" style="width:70px" onclick="sortBy('comments_count')">💬 <span class="sort-arrow">\${arrow('comments_count')}</span></th>
-        <th class="num" style="width:80px" onclick="sortBy('reach')">Alcance <span class="sort-arrow">\${arrow('reach')}</span></th>
-        <th class="num" style="width:68px" onclick="sortBy('saved')">Salvos <span class="sort-arrow">\${arrow('saved')}</span></th>
+        <th class="num col-comments" style="width:70px" onclick="sortBy('comments_count')">💬 <span class="sort-arrow">\${arrow('comments_count')}</span></th>
+        <th class="num col-reach" style="width:80px" onclick="sortBy('reach')">Alcance <span class="sort-arrow">\${arrow('reach')}</span></th>
+        <th class="num col-saved" style="width:68px" onclick="sortBy('saved')">Salvos <span class="sort-arrow">\${arrow('saved')}</span></th>
       </tr></thead>
       <tbody>\${rows}</tbody>
     </table>\`;
@@ -324,7 +360,9 @@ async function load() {
 
     const mediaRes = await fetch(\`/api/media?since=\${since}&until=\${until}\`).then(r => r.json());
     if (mediaRes.error) throw new Error(mediaRes.error);
-    renderPosts(mediaRes);
+    window._allPosts = mediaRes;
+    activeFilter = 'all';
+    applyFilter();
 
   } catch (e) {
     document.getElementById('root').innerHTML = \`<div class="error">Erro: \${e.message}</div>\`;

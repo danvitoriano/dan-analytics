@@ -6,7 +6,10 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["dashboard.js"],
       "port": 3333,
-      "autoPort": true
+      "autoPort": true,
+      "env": {
+        "ACCESS_TOKEN": "EAAOAjVaIs0gBRbm4erpbB6THb69vyZCzmFZAt6iJCn5CDSzFccCwS7BUYLRxs3Yh9hfckHTwZCMkEuxfelRMriR3ZBxofPm5ziXD5gJU6TGzU1M13YeUjeX77ZAhgip2Ht5EbAIfrhYe6shWpwdd9gDwopw96j8OOftVtGuZCy6PwjUoovFhkjNBtIPbJ60JluC9cJgyb2zgv879mSbCpnXI8QYMBmtYQJJGbryBL1q3FM3EbiG993P7YWow62EhZCKWDECG8SeisJvqZBO3QlCmtSVIWWBdzYsZD"
+      }
     }
   ]
 }
