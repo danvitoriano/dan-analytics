@@ -338,7 +338,10 @@ function renderPosts(posts) {
       <td style="width:50px">\${thumb}</td>
       <td style="width:140px;font-size:12px;color:#bbb;font-weight:500">\${title}</td>
       <td class="caption">\${caption ? \`<a href="\${p.permalink}" target="_blank">\${caption}</a>\` : '<span style="color:#555">—</span>'}</td>
-      <td class="col-link" style="width:180px">\${p.permalink ? \`<a href="\${p.permalink}" target="_blank">\${p.permalink}</a>\` : '—'}</td>
+      <td class="col-link" style="width:180px">
+        \${p.permalink ? \`<a href="\${p.permalink}" target="_blank">Instagram</a>\` : '—'}
+        \${p.id ? \` · <a href="https://business.facebook.com/latest/posts/published_posts?asset_id=17841400529260114&post_id=\${p.id}" target="_blank">Business Suite</a>\` : ''}
+      </td>
       <td class="num col-date" style="width:95px">\${date}</td>
       <td class="num" style="width:70px">\${fmt(p.like_count)}</td>
       <td class="num col-comments" style="width:70px">\${fmt(p.comments_count)}</td>
