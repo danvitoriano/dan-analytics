@@ -168,10 +168,16 @@ const HTML = `<!DOCTYPE html>
   @media (max-width: 500px) {
     .col-date, .col-comments { display: none; }
   }
-  .filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
   .filter-btn { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 5px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; }
   .filter-btn:hover { border-color: #555; color: #fff; }
   .filter-btn.active { border-color: #833ab4; color: #fff; background: #2a1a3a; }
+  .btn-download { margin-left: auto; display: flex; gap: 6px; }
+  .btn-dl { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .btn-dl:hover { border-color: #555; color: #fff; }
+  tr.highlight td { background: #1a1f10 !important; }
+  tr.highlight:hover td { background: #222d14 !important; }
+  .col-link { font-size: 11px; color: #666; word-break: break-all; }
 </style>
 </head>
 <body>
@@ -265,9 +271,11 @@ function renderPosts(posts) {
       ? \`<img class="thumb" src="\${p.thumbnail_url || p.media_url}" onerror="this.className='thumb-ph'">\`
       : '<span class="thumb-ph"></span>';
     const caption = (p.caption || '').replace(/\\n/g, ' ');
-    return \`<tr>
+    const isHot = (p.reach ?? 0) >= 50000;
+    return \`<tr class="\${isHot ? 'highlight' : ''}">
       <td style="width:50px">\${thumb}</td>
       <td class="caption">\${caption ? \`<a href="\${p.permalink}" target="_blank">\${caption}</a>\` : '<span style="color:#555">—</span>'}</td>
+      <td class="col-link" style="width:180px">\${p.permalink || '—'}</td>
       <td class="num col-date" style="width:95px">\${date}</td>
       <td class="num" style="width:70px">\${fmt(p.like_count)}</td>
       <td class="num col-comments" style="width:70px">\${fmt(p.comments_count)}</td>
@@ -279,14 +287,19 @@ function renderPosts(posts) {
   document.getElementById('posts-table').innerHTML = \`
     <div class="filters">
       <button class="filter-btn\${activeFilter==='all'?' active':''}" data-f="all" onclick="setFilter('all')">Todos</button>
-      <button class="filter-btn\${activeFilter==='top'?' active':''}" data-f="top" onclick="setFilter('top')">🏆 Top 10 Engajamento</button>
+      <button class="filter-btn\${activeFilter==='top'?' active':''}" data-f="top" onclick="setFilter('top')">🏆 Alcance > 50k</button>
       <button class="filter-btn\${activeFilter==='alura'?' active':''}" data-f="alura" onclick="setFilter('alura')">🎓 Posts da Alura</button>
+      <div class="btn-download">
+        <button class="btn-dl" onclick="downloadCSV()">⬇ CSV</button>
+        <button class="btn-dl" onclick="downloadMD()">⬇ Markdown</button>
+      </div>
     </div>
     <p class="post-count">\${posts.length} post\${posts.length !== 1 ? 's' : ''}\${activeFilter !== 'all' ? ' filtrados' : ' no período'}</p>
     <table>
       <thead><tr>
         <th style="width:50px"></th>
         <th onclick="sortBy('caption')">Legenda <span class="sort-arrow">\${arrow('caption')}</span></th>
+        <th style="width:180px">Link</th>
         <th class="num col-date" style="width:95px" onclick="sortBy('timestamp')">Data <span class="sort-arrow">\${arrow('timestamp')}</span></th>
         <th class="num" style="width:70px" onclick="sortBy('like_count')">❤️ <span class="sort-arrow">\${arrow('like_count')}</span></th>
         <th class="num col-comments" style="width:70px" onclick="sortBy('comments_count')">💬 <span class="sort-arrow">\${arrow('comments_count')}</span></th>
@@ -364,6 +377,52 @@ async function load() {
   } catch (e) {
     document.getElementById('root').innerHTML = \`<div class="error">Erro: \${e.message}</div>\`;
   }
+}
+
+function currentPosts() {
+  return window._posts ?? [];
+}
+
+function esc(v) {
+  if (v == null) return '';
+  const s = String(v).replace(/"/g, '""');
+  return s.includes(',') || s.includes('"') || s.includes('\\n') ? \`"\${s}"\` : s;
+}
+
+function downloadCSV() {
+  const posts = currentPosts();
+  const header = 'Data,Legenda,Link,Curtidas,Comentários,Alcance,Salvos,Destaque';
+  const rows = posts.map(p => [
+    new Date(p.timestamp).toLocaleDateString('pt-BR'),
+    esc((p.caption || '').replace(/\\n/g,' ')),
+    esc(p.permalink),
+    p.like_count ?? '',
+    p.comments_count ?? '',
+    p.reach ?? '',
+    p.saved ?? '',
+    (p.reach ?? 0) >= 50000 ? 'Sim' : 'Não',
+  ].join(','));
+  const blob = new Blob([header + '\\n' + rows.join('\\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = \`instagram-\${document.getElementById('dateFrom').value}_\${document.getElementById('dateTo').value}.csv\`;
+  a.click();
+}
+
+function downloadMD() {
+  const posts = currentPosts();
+  const header = '| Data | Legenda | Link | ❤️ | 💬 | Alcance | Salvos |';
+  const sep    = '|------|---------|------|-----|-----|---------|--------|';
+  const rows = posts.map(p => {
+    const hot = (p.reach ?? 0) >= 50000 ? ' 🔥' : '';
+    const caption = ((p.caption || '').replace(/\\n/g,' ').replace(/\|/g,'\\|')).slice(0, 80);
+    return \`| \${new Date(p.timestamp).toLocaleDateString('pt-BR')} | \${caption}\${hot} | \${p.permalink || ''} | \${p.like_count ?? '—'} | \${p.comments_count ?? '—'} | \${p.reach ?? '—'} | \${p.saved ?? '—'} |\`;
+  });
+  const blob = new Blob([header + '\\n' + sep + '\\n' + rows.join('\\n')], { type: 'text/markdown;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = \`instagram-\${document.getElementById('dateFrom').value}_\${document.getElementById('dateTo').value}.md\`;
+  a.click();
 }
 
 initDates();
