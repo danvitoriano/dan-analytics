@@ -108,7 +108,52 @@ async function getMedia(sinceTs, untilTs) {
     } catch {}
   }));
 
+  await generateTitles(posts);
+
   return posts;
+}
+
+async function generateTitles(posts) {
+  const key = process.env.GROQ_API_KEY;
+  if (!key || !posts.length) return;
+
+  const items = posts.map((p, i) => ({
+    i,
+    caption: (p.caption || '').slice(0, 300),
+    type: p.media_type,
+    likes: p.like_count,
+    reach: p.reach,
+  }));
+
+  const prompt = `Você é um especialista em conteúdo de redes sociais.
+Para cada post do Instagram abaixo, crie um título curto (máximo 6 palavras) em português que capture o tema central — sem hashtags, sem emoji, direto ao ponto. Seja específico e criativo.
+Retorne SOMENTE um JSON válido: array de objetos com "i" (índice) e "title" (string).
+
+Posts:
+${JSON.stringify(items)}`;
+
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'llama-3.1-8b-instant',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.4,
+      response_format: { type: 'json_object' },
+    }),
+  });
+
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) return;
+
+  const parsed = JSON.parse(text);
+  const list = Array.isArray(parsed) ? parsed : (parsed.titles ?? parsed.posts ?? Object.values(parsed)[0]);
+  if (!Array.isArray(list)) return;
+
+  for (const { i, title } of list) {
+    if (posts[i]) posts[i].ai_title = title;
+  }
 }
 
 function json(res, data, status = 200) {
@@ -288,7 +333,7 @@ function renderPosts(posts) {
       : '<span class="thumb-ph"></span>';
     const caption = (p.caption || '').replace(/\\n/g, ' ');
     const isHot = (p.reach ?? 0) >= 50000;
-    const title = generateTitle(p);
+    const title = p.ai_title || generateTitle(p);
     return \`<tr class="\${isHot ? 'highlight' : ''}">
       <td style="width:50px">\${thumb}</td>
       <td style="width:140px;font-size:12px;color:#bbb;font-weight:500">\${title}</td>
