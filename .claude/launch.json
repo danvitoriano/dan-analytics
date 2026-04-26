@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Instagram Dashboard",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["dashboard.js"],
+      "port": 3333,
+      "autoPort": true
+    }
+  ]
+}
