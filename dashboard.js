@@ -257,6 +257,7 @@ function applyFilter() {
 }
 
 function renderPosts(posts) {
+  window._posts = posts;
   const sorted = [...posts].sort((a, b) => {
     const av = a[sortKey], bv = b[sortKey];
     if (typeof av === 'string') return sortDir * av.localeCompare(bv ?? '');
