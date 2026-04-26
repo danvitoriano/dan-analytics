@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instagram Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; overflow-x: hidden; }
+  header { background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); padding: 1px; }
+  header > div { background: #0f0f0f; padding: 14px 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  header h1 { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .presets { display: flex; gap: 6px; flex-wrap: wrap; }
+  .preset { background: #1e1e1e; border: 1px solid #333; color: #aaa; padding: 5px 11px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .preset:hover, .preset.active { background: #2a2a2a; border-color: #833ab4; color: #fff; }
+  .preset-select { display: none; background: #1e1e1e; border: 1px solid #333; color: #e0e0e0; padding: 8px 10px; border-radius: 6px; font-size: 14px; width: 100%; color-scheme: dark; }
+  .date-row { display: flex; align-items: center; gap: 8px; }
+  input[type=date] { background: #1e1e1e; border: 1px solid #333; color: #e0e0e0; padding: 6px 10px; border-radius: 6px; font-size: 13px; color-scheme: dark; }
+  .sep { color: #444; font-size: 12px; }
+  .btn-load { background: linear-gradient(135deg, #833ab4, #fd1d1d); border: none; color: #fff; padding: 7px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+  .btn-load:hover { opacity: 0.85; }
+  main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+  .profile { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .profile img { width: 64px; height: 64px; border-radius: 50%; border: 2px solid #833ab4; }
+  .profile .name { font-size: 20px; font-weight: 700; }
+  .profile .bio { font-size: 13px; color: #999; margin-top: 4px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 16px; text-align: center; }
+  .card .val { font-size: 24px; font-weight: 700; color: #fff; }
+  .card .lbl { font-size: 11px; color: #777; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+  h2 { font-size: 14px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 14px; }
+  .section { margin-bottom: 32px; }
+
+  /* Filters row */
+  .filters { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .filter-btn { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 5px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .filter-btn:hover { border-color: #555; color: #fff; }
+  .filter-btn.active { border-color: #833ab4; color: #fff; background: #2a1a3a; }
+  .toggle-adv { background: none; border: 1px solid #333; color: #666; padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .toggle-adv:hover { color: #aaa; border-color: #555; }
+  .toggle-adv.on { border-color: #833ab4; color: #c084fc; }
+  .btn-dl { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .btn-dl:hover { border-color: #555; color: #fff; }
+
+  /* Column toggles (desktop) */
+  .col-toggles { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .col-tog-lbl { font-size: 11px; color: #555; margin-right: 2px; }
+  .col-tog { background: #111; border: 1px solid #222; color: #444; padding: 3px 9px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all .15s; }
+  .col-tog.on { background: #1a1a2e; border-color: #4a2a6a; color: #c084fc; }
+  .col-tog:hover { border-color: #555; color: #aaa; }
+
+  /* Advanced filter */
+  .adv-filter { background: #141414; border: 1px solid #2a2a2a; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+  .adv-filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .adv-filter-row:last-of-type { margin-bottom: 0; }
+  .adv-label { font-size: 12px; color: #666; width: 36px; }
+  .adv-select, .adv-op { background: #1e1e1e; border: 1px solid #333; color: #e0e0e0; padding: 5px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .adv-input { background: #1e1e1e; border: 1px solid #333; color: #e0e0e0; padding: 5px 8px; border-radius: 6px; font-size: 12px; width: 90px; }
+  .adv-remove { background: none; border: none; color: #555; font-size: 16px; cursor: pointer; line-height: 1; padding: 0 4px; }
+  .adv-remove:hover { color: #e07070; }
+  .adv-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .adv-add { background: none; border: 1px dashed #333; color: #666; padding: 4px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .adv-add:hover { border-color: #555; color: #aaa; }
+  .adv-apply { background: linear-gradient(135deg, #833ab4, #fd1d1d); border: none; color: #fff; padding: 5px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .adv-clear { background: none; border: 1px solid #333; color: #666; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+  .adv-clear:hover { color: #aaa; border-color: #555; }
+
+  /* Desktop table */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; min-width: 700px; }
+  th { text-align: left; padding: 8px 10px; color: #666; font-weight: 600; border-bottom: 1px solid #222; cursor: pointer; white-space: nowrap; }
+  th:hover { color: #aaa; }
+  td { padding: 9px 10px; border-bottom: 1px solid #1a1a1a; vertical-align: middle; }
+  tr:hover td { background: #161616; }
+  .caption { color: #ccc; word-break: break-word; white-space: normal; }
+  .caption a { color: #ccc; }
+  .caption a:hover { color: #b06bff; }
+  .num { text-align: right; color: #e0e0e0; white-space: nowrap; }
+  .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+  .thumb-ph { width: 40px; height: 40px; border-radius: 4px; background: #222; display: inline-block; }
+  .col-link { font-size: 11px; color: #666; word-break: break-all; }
+  tr.highlight td { background: #1a1f10 !important; }
+  tr.highlight:hover td { background: #222d14 !important; }
+  .sort-arrow { font-size: 10px; margin-left: 2px; }
+  tfoot tr td { background: #181820 !important; border-top: 1px solid #2a2a3a; border-bottom: none; font-size: 12px; }
+  tfoot tr:hover td { background: #1e1e28 !important; }
+  .totals-lbl { color: #888; font-weight: 600; font-size: 11px; }
+  .totals-num { font-weight: 700; color: #e0e0e0; }
+
+  /* Mobile post cards */
+  .post-cards { display: none; }
+  .pc { background: #1a1a1a; border: 1px solid #252525; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .pc.hot { background: #1a1f10; border-color: #344020; }
+  .pc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .pc-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+  .pc-thumb-ph { width: 48px; height: 48px; border-radius: 6px; background: #2a2a2a; flex-shrink: 0; }
+  .pc-title { font-size: 14px; font-weight: 600; color: #e0e0e0; flex: 1; line-height: 1.3; }
+  .pc-icons { display: flex; gap: 6px; flex-shrink: 0; }
+  .pc-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: #252525; border: 1px solid #333; color: #888; text-decoration: none; font-size: 15px; }
+  .pc-icon:hover { background: #333; color: #fff; }
+  .pc-metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .pc-m { background: #111; border-radius: 8px; padding: 8px 4px; text-align: center; }
+  .pc-m-val { display: block; font-size: 15px; font-weight: 700; color: #fff; }
+  .pc-m-lbl { display: block; font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+
+  /* Misc */
+  .post-count { font-size: 12px; color: #555; margin-bottom: 10px; }
+  .error { background: #2a1010; border: 1px solid #5a2020; border-radius: 8px; padding: 14px 18px; color: #e07070; margin-bottom: 20px; font-size: 13px; }
+  .loading { text-align: center; padding: 60px; color: #555; font-size: 14px; }
+
+  /* Login */
+  #login-overlay { position: fixed; inset: 0; background: #0f0f0f; display: flex; align-items: center; justify-content: center; z-index: 999; }
+  .login-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 14px; padding: 40px 36px; width: 320px; text-align: center; }
+  .login-box h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-transform: none; letter-spacing: 0; }
+  .login-box p { font-size: 13px; color: #666; margin-bottom: 24px; }
+  .login-box input[type=password] { width: 100%; background: #111; border: 1px solid #333; color: #e0e0e0; padding: 10px 14px; border-radius: 8px; font-size: 14px; margin-bottom: 12px; outline: none; }
+  .login-box input[type=password]:focus { border-color: #833ab4; }
+  .login-box button { width: 100%; background: linear-gradient(135deg, #833ab4, #fd1d1d); border: none; color: #fff; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .login-box button:hover { opacity: 0.85; }
+  .login-error { color: #e07070; font-size: 12px; margin-top: 8px; display: none; }
+
+  /* Date modal */
+  .date-modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 900; align-items: center; justify-content: center; }
+  .date-modal-backdrop.open { display: flex; }
+  .date-modal { background: #1a1a1a; border: 1px solid #333; border-radius: 14px; padding: 24px 20px; width: 300px; }
+  .date-modal h3 { font-size: 15px; font-weight: 600; color: #e0e0e0; margin-bottom: 16px; }
+  .date-modal label { display: block; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .date-modal input[type=date] { width: 100%; font-size: 16px; padding: 10px 12px; margin-bottom: 14px; }
+  .date-modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .btn-modal-apply { flex: 1; background: linear-gradient(135deg, #833ab4, #fd1d1d); border: none; color: #fff; padding: 11px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-modal-close { background: #252525; border: 1px solid #333; color: #aaa; padding: 11px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  .mobile-actions { display: none; gap: 8px; }
+  .btn-date-modal { background: #1e1e1e; border: 1px solid #333; color: #aaa; padding: 10px 14px; border-radius: 6px; font-size: 14px; cursor: pointer; flex: 1; text-align: center; }
+  .btn-date-modal:hover { border-color: #555; color: #fff; }
+
+  /* Mobile overrides */
+  @media (max-width: 640px) {
+    header > div { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 14px; }
+    .presets { display: none; }
+    .preset-select { display: block; }
+    .date-row { display: none; }
+    .mobile-actions { display: flex; }
+    .btn-load { padding: 10px 16px; font-size: 14px; }
+    main { padding: 14px; }
+    .cards { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+    .card { padding: 14px 10px; }
+    .card .val { font-size: 20px; }
+    .profile img { width: 52px; height: 52px; }
+    .profile .name { font-size: 17px; }
+    .profile .bio { font-size: 12px; }
+    .section { margin-bottom: 20px; }
+    /* Hide desktop table, show cards */
+    .table-wrap { display: none; }
+    .post-cards { display: block; }
+    /* Hide col-toggles on mobile (not relevant for card view) */
+    .col-toggles { display: none; }
+    /* Fix filters: no auto-margin, wrap cleanly */
+    .filters { gap: 6px; }
+    .filters .btn-dl { margin-left: 0; }
+    .login-box { width: 88vw; padding: 30px 20px; }
+  }
+</style>
+<style id="col-vis"></style>
+</head>
+<body>
+
+<div id="login-overlay">
+  <div class="login-box">
+    <h2>Instagram Dashboard</h2>
+    <p>Digite a senha para continuar</p>
+    <input type="password" id="pwd-input" placeholder="Senha" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">Entrar</button>
+    <div class="login-error" id="login-error">Senha incorreta</div>
+  </div>
+</div>
+
+<!-- Date modal (mobile) -->
+<div class="date-modal-backdrop" id="date-modal" onclick="if(event.target===this)closeDateModal()">
+  <div class="date-modal">
+    <h3>📅 Período personalizado</h3>
+    <label>De</label>
+    <input type="date" id="dateFromModal" color-scheme="dark">
+    <label>Até</label>
+    <input type="date" id="dateToModal" color-scheme="dark">
+    <div class="date-modal-actions">
+      <button class="btn-modal-close" onclick="closeDateModal()">Cancelar</button>
+      <button class="btn-modal-apply" onclick="applyDateModal()">Buscar</button>
+    </div>
+  </div>
+</div>
+
+<header><div>
+  <h1>Instagram Dashboard</h1>
+  <div class="presets">
+    <button class="preset" onclick="setPreset(7)">7d</button>
+    <button class="preset" onclick="setPreset(30)">30d</button>
+    <button class="preset" onclick="setPreset(90)">90d</button>
+    <button class="preset" onclick="setPreset(180)">6m</button>
+    <button class="preset" onclick="setPreset(365)">1a</button>
+    <button class="preset" onclick="setPreset(729)">2a</button>
+  </div>
+  <select class="preset-select" onchange="setPresetSelect(this.value)">
+    <option value="7">Últimos 7 dias</option>
+    <option value="30" selected>Últimos 30 dias</option>
+    <option value="90">Últimos 90 dias</option>
+    <option value="180">Últimos 6 meses</option>
+    <option value="365">Último ano</option>
+    <option value="729">Últimos 2 anos</option>
+  </select>
+  <div class="date-row">
+    <input type="date" id="dateFrom">
+    <span class="sep">até</span>
+    <input type="date" id="dateTo">
+    <button class="btn-load" onclick="load()">Buscar</button>
+  </div>
+  <div class="mobile-actions">
+    <button class="btn-date-modal" onclick="openDateModal()">📅 Datas</button>
+    <button class="btn-load" onclick="load()">Buscar</button>
+  </div>
+</div></header>
+
+<main>
+  <div id="root"></div>
+</main>
+
+<script>
+let sortKey = 'timestamp', sortDir = -1;
+let activeFilter = 'all';
+let _password = '';
+
+const COL_DEFS = [
+  { key: 'col-title',    label: 'Título' },
+  { key: 'col-caption',  label: 'Legenda' },
+  { key: 'col-link',     label: 'Link' },
+  { key: 'col-date',     label: 'Data' },
+  { key: 'col-likes',    label: 'Curtidas' },
+  { key: 'col-comments', label: 'Comentários' },
+  { key: 'col-reach',    label: 'Alcance' },
+  { key: 'col-saved',    label: 'Salvos' },
+];
+let hiddenCols = new Set();
+
+function toggleCol(key) {
+  if (hiddenCols.has(key)) hiddenCols.delete(key);
+  else hiddenCols.add(key);
+  updateColVis();
+  document.querySelectorAll('.col-tog').forEach(b => {
+    b.classList.toggle('on', !hiddenCols.has(b.dataset.col));
+  });
+}
+
+function updateColVis() {
+  let css = '';
+  for (const key of hiddenCols) css += `.${key}{display:none!important}\n`;
+  document.getElementById('col-vis').textContent = css;
+}
+
+function apiFetch(url) {
+  return fetch(url, { headers: { 'x-password': _password } }).then(r => r.json());
+}
+
+async function doLogin() {
+  const pwd = document.getElementById('pwd-input').value;
+  const err = document.getElementById('login-error');
+  err.style.display = 'none';
+  const res = await fetch('/api/account', { headers: { 'x-password': pwd } });
+  if (res.status === 401) { err.style.display = 'block'; return; }
+  _password = pwd;
+  document.getElementById('login-overlay').style.display = 'none';
+  initDates();
+  load();
+}
+
+function toDateStr(d) { return d.toISOString().slice(0, 10); }
+
+function openDateModal() {
+  document.getElementById('dateFromModal').value = document.getElementById('dateFrom').value;
+  document.getElementById('dateToModal').value = document.getElementById('dateTo').value;
+  document.getElementById('date-modal').classList.add('open');
+}
+function closeDateModal() {
+  document.getElementById('date-modal').classList.remove('open');
+}
+function applyDateModal() {
+  const f = document.getElementById('dateFromModal').value;
+  const t = document.getElementById('dateToModal').value;
+  if (!f || !t) { alert('Selecione as duas datas'); return; }
+  document.getElementById('dateFrom').value = f;
+  document.getElementById('dateTo').value = t;
+  closeDateModal();
+  load();
+}
+
+function setPreset(days) {
+  document.querySelectorAll('.preset').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  const until = new Date();
+  const since = new Date(Date.now() - days * 86400000);
+  document.getElementById('dateFrom').value = toDateStr(since);
+  document.getElementById('dateTo').value = toDateStr(until);
+}
+
+function setPresetSelect(days) {
+  const until = new Date();
+  const since = new Date(Date.now() - parseInt(days) * 86400000);
+  document.getElementById('dateFrom').value = toDateStr(since);
+  document.getElementById('dateTo').value = toDateStr(until);
+}
+
+function initDates() {
+  const until = new Date();
+  const since = new Date(Date.now() - 30 * 86400000);
+  document.getElementById('dateFrom').value = toDateStr(since);
+  document.getElementById('dateTo').value = toDateStr(until);
+  document.querySelector('.preset[onclick="setPreset(30)"]').classList.add('active');
+}
+
+function generateTitle(p) {
+  const type = { VIDEO: 'Vídeo', IMAGE: 'Foto', CAROUSEL_ALBUM: 'Carrossel' }[p.media_type] || p.media_type;
+  if (!p.caption) return type + ' sem legenda';
+  const clean = p.caption
+    .replace(/#\S+/g, '').replace(/https?:\/\/\S+/g, '')
+    .replace(/[\u{1F300}-\u{1FFFF}]/gu, '').replace(/\s+/g, ' ').trim();
+  if (!clean) return type;
+  const words = clean.split(/[.!?\n]/)[0].trim().split(' ').slice(0, 7).join(' ');
+  return words.length > 2 ? words : type;
+}
+
+function fmt(n) {
+  if (n == null) return '—';
+  return Number(n).toLocaleString('pt-BR');
+}
+
+function sortBy(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = -1; }
+  applyFilter();
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.filter-btn[data-f="${f}"]`)?.classList.add('active');
+  applyFilter();
+}
+
+function applyFilter() {
+  let posts = window._allPosts ?? [];
+  if (activeFilter === 'top') posts = posts.filter(p => (p.reach ?? 0) >= 50000);
+  else if (activeFilter === 'alura') posts = posts.filter(p => (p.caption || '').toLowerCase().includes('alura'));
+  else if (activeFilter === 'archive') posts = posts.filter(p =>
+    (p.reach ?? 0) < 10000 &&
+    !(p.caption || '').toLowerCase().includes('alura')
+  );
+  renderPosts(posts);
+}
+
+const ICON_IG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>`;
+const ICON_EXT = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+
+function renderPosts(posts) {
+  window._posts = posts;
+  const sorted = [...posts].sort((a, b) => {
+    const av = a[sortKey], bv = b[sortKey];
+    if (typeof av === 'string') return sortDir * av.localeCompare(bv ?? '');
+    return sortDir * ((av ?? -1) - (bv ?? -1));
+  });
+
+  const arrow = k => sortKey === k ? (sortDir === 1 ? '↑' : '↓') : '';
+  const sum = f => sorted.reduce((acc, p) => acc + (p[f] ?? 0), 0);
+  const totLikes = sum('like_count'), totComments = sum('comments_count');
+  const totReach = sum('reach'), totSaved = sum('saved'), totShares = sum('shares');
+
+  // Desktop table rows
+  const rows = sorted.map(p => {
+    const date  = new Date(p.timestamp).toLocaleDateString('pt-BR');
+    const thumb = p.thumbnail_url || p.media_url
+      ? `<img class="thumb" src="${p.thumbnail_url || p.media_url}" onerror="this.className='thumb-ph'">`
+      : '<span class="thumb-ph"></span>';
+    const caption  = (p.caption || '').replace(/\n/g, ' ');
+    const isHot    = (p.reach ?? 0) >= 50000;
+    const title    = p.ai_title || generateTitle(p);
+    const shortcode = p.permalink ? p.permalink.replace(/\/$/, '').split('/').pop() : '';
+    return `<tr class="${isHot ? 'highlight' : ''}">
+      <td style="width:50px">${thumb}</td>
+      <td class="col-title" style="width:140px;font-size:12px;color:#bbb;font-weight:500">${title}</td>
+      <td class="caption col-caption">${caption ? `<a href="${p.permalink}" target="_blank">${caption}</a>` : '<span style="color:#555">—</span>'}</td>
+      <td class="col-link" style="width:150px">
+        ${p.permalink ? `<a href="${p.permalink}" target="_blank">${shortcode}</a>` : '—'}
+        ${p.id ? ` <a href="https://business.facebook.com/latest/posts/published_posts?asset_id=17841400529260114&post_id=${p.id}" target="_blank" title="Meta Business Suite" style="color:#555;font-size:14px;vertical-align:middle;text-decoration:none">↗</a>` : ''}
+      </td>
+      <td class="num col-date" style="width:95px">${date}</td>
+      <td class="num col-likes" style="width:70px">${fmt(p.like_count)}</td>
+      <td class="num col-comments" style="width:70px">${fmt(p.comments_count)}</td>
+      <td class="num col-reach" style="width:80px">${fmt(p.reach)}</td>
+      <td class="num col-saved" style="width:68px">${fmt(p.saved)}</td>
+      <td class="num col-shares" style="width:68px">${fmt(p.shares)}</td>
+    </tr>`;
+  }).join('');
+
+  // Mobile cards
+  const mobileCards = sorted.map(p => {
+    const isHot = (p.reach ?? 0) >= 50000;
+    const title = p.ai_title || generateTitle(p);
+    const thumbSrc = p.thumbnail_url || p.media_url;
+    const thumbEl = thumbSrc
+      ? `<img class="pc-thumb" src="${thumbSrc}" onerror="this.outerHTML='<span class=\'pc-thumb-ph\'></span>'">`
+      : '<span class="pc-thumb-ph"></span>';
+    const igLink  = p.permalink ? `<a href="${p.permalink}" target="_blank" class="pc-icon" title="Instagram">${ICON_IG}</a>` : '';
+    const bizLink = p.id ? `<a href="https://business.facebook.com/latest/posts/published_posts?asset_id=17841400529260114&post_id=${p.id}" target="_blank" class="pc-icon" title="Meta Business Suite">${ICON_EXT}</a>` : '';
+    return `<div class="pc${isHot ? ' hot' : ''}">
+      <div class="pc-head">
+        ${thumbEl}
+        <div class="pc-title">${title}</div>
+        <div class="pc-icons">${igLink}${bizLink}</div>
+      </div>
+      <div class="pc-metrics">
+        <div class="pc-m"><span class="pc-m-val">${fmt(p.reach)}</span><span class="pc-m-lbl">Alcance</span></div>
+        <div class="pc-m"><span class="pc-m-val">${fmt(p.like_count)}</span><span class="pc-m-lbl">Curtidas</span></div>
+        <div class="pc-m"><span class="pc-m-val">${fmt(p.comments_count)}</span><span class="pc-m-lbl">Coment.</span></div>
+        <div class="pc-m"><span class="pc-m-val">${fmt(p.saved)}</span><span class="pc-m-lbl">Salvos</span></div>
+        <div class="pc-m"><span class="pc-m-val">${fmt(p.shares)}</span><span class="pc-m-lbl">Shares</span></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const colToggles = COL_DEFS.map(c =>
+    `<button class="col-tog ${hiddenCols.has(c.key) ? '' : 'on'}" data-col="${c.key}" onclick="toggleCol('${c.key}')">${c.label}</button>`
+  ).join('');
+
+  document.getElementById('posts-table').innerHTML = `
+    <div class="col-toggles">
+      <span class="col-tog-lbl">Colunas:</span>${colToggles}
+    </div>
+    <div class="filters">
+      <button class="filter-btn${activeFilter==='all'?' active':''}" data-f="all" onclick="setFilter('all')">Todos</button>
+      <button class="filter-btn${activeFilter==='top'?' active':''}" data-f="top" onclick="setFilter('top')">🏆 Alcance > 50k</button>
+      <button class="filter-btn${activeFilter==='alura'?' active':''}" data-f="alura" onclick="setFilter('alura')">🎓 Posts da Alura</button>
+      <button class="filter-btn${activeFilter==='archive'?' active':''}" data-f="archive" onclick="setFilter('archive')">🗄️ Candidatos ao arquivo</button>
+      <button class="toggle-adv${activeFilter==='adv'?' on':''}" onclick="toggleAdv()">⚙ Filtro avançado</button>
+      <button class="btn-dl" onclick="downloadCSV()">⬇ CSV</button>
+    </div>
+    <div class="adv-filter" id="adv-panel" style="display:none">
+      <div id="adv-rows"></div>
+      <div class="adv-actions">
+        <button class="adv-add" onclick="addAdvRow()">+ Adicionar condição</button>
+        <button class="adv-apply" onclick="applyAdv()">Aplicar</button>
+        <button class="adv-clear" onclick="clearAdv()">Limpar</button>
+      </div>
+    </div>
+    <p class="post-count">${posts.length} post${posts.length !== 1 ? 's' : ''}${activeFilter !== 'all' ? ' filtrados' : ' no período'}</p>
+    <div class="post-cards">${mobileCards}</div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th style="width:50px"></th>
+        <th class="col-title" style="width:140px">Título</th>
+        <th class="col-caption" onclick="sortBy('caption')">Legenda <span class="sort-arrow">${arrow('caption')}</span></th>
+        <th class="col-link" style="width:150px">Link</th>
+        <th class="num col-date" style="width:95px" onclick="sortBy('timestamp')">Data <span class="sort-arrow">${arrow('timestamp')}</span></th>
+        <th class="num col-likes" style="width:70px" onclick="sortBy('like_count')">❤️ <span class="sort-arrow">${arrow('like_count')}</span></th>
+        <th class="num col-comments" style="width:70px" onclick="sortBy('comments_count')">💬 <span class="sort-arrow">${arrow('comments_count')}</span></th>
+        <th class="num col-reach" style="width:80px" onclick="sortBy('reach')">Alcance <span class="sort-arrow">${arrow('reach')}</span></th>
+        <th class="num col-saved" style="width:68px" onclick="sortBy('saved')">Salvos <span class="sort-arrow">${arrow('saved')}</span></th>
+        <th class="num col-shares" style="width:68px" onclick="sortBy('shares')">Shares <span class="sort-arrow">${arrow('shares')}</span></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr class="totals-row">
+        <td></td>
+        <td class="col-title totals-lbl">${sorted.length} publicações</td>
+        <td class="col-caption"></td>
+        <td class="col-link"></td>
+        <td class="col-date"></td>
+        <td class="num col-likes totals-num">${fmt(totLikes)}</td>
+        <td class="num col-comments totals-num">${fmt(totComments)}</td>
+        <td class="num col-reach totals-num">${fmt(totReach)}</td>
+        <td class="num col-saved totals-num">${fmt(totSaved)}</td>
+        <td class="num col-shares totals-num">${fmt(totShares)}</td>
+      </tr></tfoot>
+    </table></div>`;
+
+  updateColVis();
+}
+
+async function load() {
+  const fromVal = document.getElementById('dateFrom').value;
+  const toVal   = document.getElementById('dateTo').value;
+  if (!fromVal || !toVal) { alert('Selecione as datas'); return; }
+
+  const since = Math.floor(new Date(fromVal).getTime() / 1000);
+  const until = Math.floor(new Date(toVal + 'T23:59:59').getTime() / 1000);
+  const days  = Math.round((until - since) / 86400);
+
+  document.getElementById('root').innerHTML = '<div class="loading">Buscando dados do período...</div>';
+
+  try {
+    const [acc, ins] = await Promise.all([
+      apiFetch('/api/account'),
+      apiFetch(`/api/insights?since=${since}&until=${until}`),
+    ]);
+
+    if (acc.error) throw new Error(acc.error);
+    if (ins.error) throw new Error(ins.error);
+
+    const profilePic = acc.profile_picture_url
+      ? `<img src="${acc.profile_picture_url}" alt="avatar">`
+      : '<span class="thumb-ph" style="width:64px;height:64px;border-radius:50%"></span>';
+
+    document.getElementById('root').innerHTML = `
+      <div class="profile">
+        ${profilePic}
+        <div>
+          <div class="name">@${acc.username}</div>
+          <div class="bio">${(acc.biography || '').replace(/\n/g,' ')}</div>
+        </div>
+      </div>
+      <div class="section">
+        <h2>Conta</h2>
+        <div class="cards">
+          <div class="card"><div class="val">${fmt(acc.followers_count)}</div><div class="lbl">Seguidores</div></div>
+          <div class="card"><div class="val">${fmt(acc.follows_count)}</div><div class="lbl">Seguindo</div></div>
+          <div class="card"><div class="val">${fmt(acc.media_count)}</div><div class="lbl">Publicações</div></div>
+        </div>
+      </div>
+      <div class="section">
+        <h2>Insights — ${days} dias</h2>
+        <div class="cards">
+          <div class="card"><div class="val">${fmt(ins.reach)}</div><div class="lbl">Alcance</div></div>
+          <div class="card"><div class="val">${fmt(ins.accounts_engaged)}</div><div class="lbl">Contas engajadas</div></div>
+          <div class="card"><div class="val">${fmt(ins.profile_views)}</div><div class="lbl">Visitas ao perfil</div></div>
+          <div class="card"><div class="val">${fmt(ins.follower_count)}</div><div class="lbl">Novos seguidores</div><div style="font-size:10px;color:#555;margin-top:2px">últimos 30d</div></div>
+        </div>
+      </div>
+      <div class="section">
+        <h2 id="posts-heading">Posts do período</h2>
+        <div id="posts-table"><div class="loading">Carregando posts...</div></div>
+      </div>
+    `;
+
+    const media = await apiFetch(`/api/media?since=${since}&until=${until}`);
+    if (media.error) throw new Error(media.error);
+    window._allPosts = media;
+    activeFilter = 'all';
+    applyFilter();
+    document.getElementById('posts-heading').textContent = `Posts do período — ${media.length} publicações`;
+
+  } catch (e) {
+    document.getElementById('root').innerHTML = `<div class="error">Erro: ${e.message}</div>`;
+  }
+}
+
+const METRICS = { reach: 'Alcance', like_count: 'Curtidas', comments_count: 'Comentários', saved: 'Salvos' };
+const OPS = { '>=': '≥', '<=': '≤', '=': '=', '>': '>', '<': '<' };
+let advRowCount = 0;
+
+function metricOpts() { return Object.entries(METRICS).map(([k,v]) => `<option value="${k}">${v}</option>`).join(''); }
+function opOpts()     { return Object.entries(OPS).map(([k,v]) => `<option value="${k}">${v}</option>`).join(''); }
+
+function toggleAdv() {
+  const panel = document.getElementById('adv-panel');
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? 'block' : 'none';
+  document.querySelector('.toggle-adv').classList.toggle('on', open);
+  if (open && !document.getElementById('adv-rows').children.length) addAdvRow();
+}
+
+function addAdvRow() {
+  const id = ++advRowCount;
+  const container = document.getElementById('adv-rows');
+  const isFirst = container.children.length === 0;
+  const row = document.createElement('div');
+  row.className = 'adv-filter-row';
+  row.id = 'adv-row-' + id;
+  row.innerHTML = `
+    <span class="adv-label">${isFirst ? 'Onde' : 'E'}</span>
+    <select class="adv-select" data-field>${metricOpts()}</select>
+    <select class="adv-op" data-op>${opOpts()}</select>
+    <input class="adv-input" type="number" data-val placeholder="0">
+    <button class="adv-remove" onclick="removeAdvRow(${id})">×</button>
+  `;
+  container.appendChild(row);
+}
+
+function removeAdvRow(id) {
+  document.getElementById('adv-row-' + id)?.remove();
+  document.querySelectorAll('#adv-rows .adv-filter-row').forEach((r, i) => {
+    r.querySelector('.adv-label').textContent = i === 0 ? 'Onde' : 'E';
+  });
+}
+
+function applyAdv() {
+  const rows = [...document.querySelectorAll('#adv-rows .adv-filter-row')];
+  const conditions = rows.map(r => ({
+    field: r.querySelector('[data-field]').value,
+    op:    r.querySelector('[data-op]').value,
+    val:   parseFloat(r.querySelector('[data-val]').value) || 0,
+  }));
+  if (!conditions.length) return;
+  activeFilter = 'adv';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  let posts = window._allPosts ?? [];
+  posts = posts.filter(p => conditions.every(({ field, op, val }) => {
+    const v = p[field] ?? 0;
+    if (op === '>=') return v >= val;
+    if (op === '<=') return v <= val;
+    if (op === '>')  return v > val;
+    if (op === '<')  return v < val;
+    return v === val;
+  }));
+  renderPosts(posts);
+}
+
+function clearAdv() {
+  document.getElementById('adv-rows').innerHTML = '';
+  advRowCount = 0;
+  addAdvRow();
+  setFilter('all');
+}
+
+function esc(v) {
+  if (v == null) return '';
+  const s = String(v).replace(/"/g, '""');
+  return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
+}
+
+function downloadCSV() {
+  const posts = window._posts ?? [];
+  const header = 'Data,Título,Legenda,Link,Curtidas,Comentários,Alcance,Salvos,Shares,Destaque';
+  const rows = posts.map(p => [
+    new Date(p.timestamp).toLocaleDateString('pt-BR'),
+    esc(p.ai_title || generateTitle(p)),
+    esc((p.caption || '').replace(/\n/g,' ')),
+    esc(p.permalink),
+    p.like_count ?? '',
+    p.comments_count ?? '',
+    p.reach ?? '',
+    p.saved ?? '',
+    p.shares ?? '',
+    (p.reach ?? 0) >= 50000 ? 'Sim' : 'Não',
+  ].join(','));
+  const blob = new Blob([header + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `instagram-${document.getElementById('dateFrom').value}_${document.getElementById('dateTo').value}.csv`;
+  a.click();
+}
+</script>
+</body>
+</html>
